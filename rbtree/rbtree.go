@@ -64,52 +64,98 @@ func (t *RbTree[K, V]) Insert(key K, value V) {
 }
 
 func (t *RbTree[K, V]) Delete(key K) {
-	findNode := t.FindNode(key)
-	if findNode == nil {
+	check := t.FindNode(key)
+	if check == nil {
 		return
 	}
 
-	var deleteNode *Node[K, V]
-	if findNode.left != nil && findNode.right != nil {
-		deleteNode = successor(findNode)
+	var del *Node[K, V]
+	if check.left != nil && check.right != nil {
+		del = successor(check)
 	} else {
-		deleteNode = findNode
+		del = check
 	}
 
-	if deleteNode.parent == nil {
-
-	} else if deleteNode.parent.right == deleteNode {
-
-	} else if deleteNode.parent.left == deleteNode {
-
+	var extra *Node[K, V]
+	if del.right != nil {
+		extra = del.right
+	} else if del.left != nil {
+		extra = del.left
 	}
 
-	var extraNode *Node[K, V]
-	if deleteNode.right != nil {
-		extraNode = deleteNode.right
-	} else if deleteNode.left != nil {
-		extraNode = deleteNode.left
+	if extra != nil {
+		extra.parent = del.parent
 	}
 
-	if extraNode.parent != nil {
-		extraNode.parent = deleteNode.parent
+	extraP := del.parent
+	if del.parent == nil {
+		t.root = extra
+	} else if del.parent.right == del {
+		del.parent.right = extra
+	} else {
+		del.parent.left = extra
 	}
 
-	if deleteNode.parent != nil {
-		if deleteNode.parent.left == deleteNode {
-			deleteNode.parent.left = extraNode
+	if check != del {
+		check.key = del.key
+		check.value = del.value
+	}
+
+	if del.color == BLACK {
+		t.reBalanceDeleteNode(extra, extraP)
+	}
+	t.size--
+}
+
+func (t *RbTree[K, V]) reBalanceDeleteNode(extra, parent *Node[K, V]) {
+	//extra不是根节点，并且extra是黑色
+	for extra.parent != nil && getColor(extra) == BLACK {
+		if extra != nil {
+			parent = extra.parent
+		}
+
+		if parent.left == extra {
+			extra = t.rbFixupLeft(parent)
 		} else {
-			deleteNode.parent.right = extraNode
+
 		}
 	}
 
-	findNode.key = deleteNode.key
-	findNode.value = deleteNode.value
-	t.rebalanceDeleteNode(findNode, deleteNode)
+	if extra != nil {
+		extra.color = BLACK
+	}
 }
 
-func (t *RbTree[K, V]) rebalanceDeleteNode(e, d *Node[K, V]) {
+func (t *RbTree[K, V]) rbFixupLeft(parent *Node[K, V]) *Node[K, V] {
+	ret := t.root
+	w := parent.right
+	if w.color == RED {
+		w.color = BLACK
+		parent.color = RED
+		t.leftRotate(parent)
+		w = parent.left
+	}
 
+	if getColor(w.left) == BLACK && getColor(w.right) == BLACK {
+		w.color = RED
+		ret = parent
+	} else {
+		if getColor(w.right) == BLACK {
+			if w.left != nil {
+				w.left.color = BLACK
+			}
+			w.color = RED
+			t.rightRotate(w)
+			w = parent.right
+		}
+		w.color = parent.color
+		parent.color = BLACK
+		if w.right != nil {
+			w.right.color = BLACK
+		}
+		t.leftRotate(parent)
+	}
+	return ret
 }
 
 func (t *RbTree[K, V]) upInsertNode(n *Node[K, V]) {
